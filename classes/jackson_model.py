@@ -112,6 +112,7 @@ class JacksonSimulationV2():
         parent_neighbour_targets = self.find_parent_neighbour_targets(self.graph_history[-1], parent_targets) # DONE
 
 
+
         # add the exposure group of the node to its attributes
         new_node_targets = list(np.concatenate((parent_targets, parent_neighbour_targets)))
         new_node[1]['Exposure Group'].extend(new_node_targets)
@@ -195,7 +196,7 @@ class JacksonSimulationV2():
         '''parent neighbours'''
         # probability pn to connect to each n of them
         parent_neighbour_edge_types = [self.helper_functions().SES_edge_classifier(graph, new_node[0], i) for i in parent_neighbour_target_list]
-        parent_neighbour_edge_probs = [self.pm_x if edge_type == 'cross' else self.pm_o for edge_type in parent_neighbour_edge_types]
+        parent_neighbour_edge_probs = [self.pn_x if edge_type == 'cross' else self.pn_o for edge_type in parent_neighbour_edge_types]
         parent_neighbour_edges = [np.random.choice([0,1], size=1, p=[1-prob, prob])[0] for prob in parent_neighbour_edge_probs]
 
         # realised connections: cross product of the two vectors
@@ -310,7 +311,7 @@ class JacksonSimulationV2():
         # returns list of neighbours for all the nodes in the given list
         def find_neighbours(self, graph, node_list):
             if len(node_list) != 0:
-                all_neighbours_list = list(np.concatenate(([list(graph[node]) for node in node_list])))
+                all_neighbours_list = list(np.concatenate([list(graph.neighbors(node)) for node in node_list]))
             else:
                 all_neighbours_list = []
 
@@ -385,10 +386,10 @@ class JacksonSimulationV2():
             # summarising function
             def summ_graph_social_network_chars(GSNC_output):
                 summary_dict = {
-                    'Diameter': GSNC_output['Diameter'],
+                    #'Diameter': GSNC_output['Diameter'],
                     'APL': GSNC_output['APL'],
                     'Clustering': GSNC_output['Clustering'],
-                    'Degree': GSNC_output['Degree'],
+                    'Degree-list': GSNC_output['Degree-list'],
                     'Assortativity': GSNC_output['Assortativity'],
                     'Degree-neighbour-clustering': GSNC_output['Degree-neighbour-clustering'][0]
                 }
@@ -400,11 +401,11 @@ class JacksonSimulationV2():
             var_degree = np.var(degree_hist)
 
             small_world_char_dict = {
-                'Diameter': nx.diameter(graph),     # low diameter
+                #'Diameter': nx.diameter(graph),     # low diameter
                 'APL': nx.average_shortest_path_length(graph),      # relatively low APL (order of log n)
                 'Clustering': nx.average_clustering(graph),     # relatively high clustering
                 'Degree': (avg_degree, var_degree),     # fat degree tails
-                'Degree histogram': degree_hist,
+                'Degree-list': degree_hist,
                 #nx.degree_histogram(G) # returns a list a where a[x] = number of nodes with a degree of x, up until the highest amount     
                 'Assortativity': nx.assortativity.degree_assortativity_coefficient(graph),      # assortativity: positive degree correlation
                 'Degree-neighbour-clustering': self.degree_neighbour_clustering_corr(graph)     # negative correlation between own degree and neighbours' clustering
