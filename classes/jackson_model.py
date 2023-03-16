@@ -59,6 +59,9 @@ class JacksonSimulationV2():
         for t in range(self.T):
             self.update_simulation(self.graph_history[-1])
 
+
+        self.final_graph = self.graph_history[-1]
+        
         # calculate exposure and friending bias
 
 
@@ -88,7 +91,6 @@ class JacksonSimulationV2():
             initial_neighbours = list(np.random.choice(possible_links, min(self.m + self.n, self.initial_n-1), replace=False))
             
             # creates the edges
-            '''for some reason it's treating this as 3 arguments?'''
             initial_edges = self.helper_functions().edge_creator_helper(node, initial_neighbours)
             initial_graph.add_edges_from(initial_edges)
 
@@ -363,11 +365,8 @@ class JacksonSimulationV2():
             for node in nodes:
                 # find the neighbours
                 node_neighbours = self.find_neighbours(graph, [node])
-                neighbour_clustering = []
-
                 # get clustering for each neighbour and calculate the average
-                for neighbour in node_neighbours:
-                    neighbour_clustering.append(node_clustering[neighbour])
+                neighbour_clustering = [node_clustering[neighbour] for neighbour in node_neighbours]
                 avg_neighbour_clustering = np.average(neighbour_clustering)
 
                 # append to the dict: tuple with node's own degree, and its neighbours avg clustering
