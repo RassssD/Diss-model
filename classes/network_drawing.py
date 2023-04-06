@@ -8,8 +8,6 @@ import plotly.graph_objects as go
 
 
 
-
-
 class plotly_sim_drawing(object):
     '''HELPER FUNCTIONS'''
     '''MODIFY THESE TO TAKE A SPECIFIC TIME INSTEAD'''
@@ -45,7 +43,7 @@ class plotly_sim_drawing(object):
 
             line=dict(
                 width=0.5, 
-                color='#888')
+                color='rgba(100, 100, 100, 0.35)')
         )
 
         return edge_trace

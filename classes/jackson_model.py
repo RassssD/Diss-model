@@ -1,19 +1,11 @@
 
-
 import networkx as nx
 import numpy as np
-
-import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
-import matplotlib.cm as cm
-
-
-
-
+import pandas as pd
 
 class JacksonSimulationV2():
 
-    def __init__(self, initial_n, T, m, pm_o, n, pn_o, p_SES_high, biased = False, rho = 1):
+    def __init__(self, initial_n, T, m, pm_o, n, pn_o, p_SES_high, biased = False, rho = 1, epsilon = 1):
 
         # parameters
         self.initial_n = initial_n # initial number of nodes
@@ -26,16 +18,18 @@ class JacksonSimulationV2():
         self.biased = biased # whether or not to use a class-biased simulation
         self.rho = rho # ratio (within friendship probatility)/(cross friendship probatility): rho = how many times more likely to befriend within-class than across-class (rho = 2 => twice as likely, rho = 1/3 => three times less likely)
         # NB rho is initialised as 1, hence no bias, per default. If biased, specify rho value
+        self.epsilon = epsilon
         
         # calculate cross-friendship probabilities: rho = po/px => px = po/rho
         self.pm_x = pm_o / rho
         self.pn_x = pn_o / rho
 
-        if biased == True and rho == 1:
+        '''
+        if biased == True and (rho == 1 or epsilon == 1):
             print('Warning: Biased simulation requested, but rho = 1.')
         if biased == False and rho != 1:
             print(f'Warning: Unbiased simulation requested, but rho = {self.rho}')
-
+        '''
         # also maybe add options for the functions used
         # self.initialiser_function = 
 
@@ -59,9 +53,6 @@ class JacksonSimulationV2():
         for t in range(self.T):
             self.update_simulation(self.graph_history[-1])
 
-
-        self.final_graph = self.graph_history[-1]
-        
         # calculate exposure and friending bias
 
 
@@ -105,14 +96,14 @@ class JacksonSimulationV2():
         # copy graph with the added connections
         new_graph = current_graph.copy()
 
+        '''maybe make this whole thing into a function'''
         # add the new node
         new_node = self.new_node_birth(current_graph) # DONE
         new_graph.add_nodes_from([new_node])
 
         # get the connections for the new node
-        parent_targets = self.find_parent_nodes_targets(self.graph_history[-1]) # DONE
-        parent_neighbour_targets = self.find_parent_neighbour_targets(self.graph_history[-1], parent_targets) # DONE
-
+        parent_targets = self.find_parent_nodes_targets(self.graph_history[-1], new_node[1]['SES_High']) # DONE
+        parent_neighbour_targets = self.find_parent_neighbour_targets(self.graph_history[-1], parent_targets, new_node[1]['SES_High']) # DONE
 
 
         # add the exposure group of the node to its attributes
@@ -139,37 +130,63 @@ class JacksonSimulationV2():
 
 
     # create new node, indexed as the next number in the list
-    def new_node_birth(self, graph):
+    def new_node_birth(self, graph, MTO_sim = False):
         current_nodes = graph.nodes()
         new_node = max(current_nodes) + 1 if len(current_nodes) > 0 else 1
 
         '''currently SES determined at birth, this can be changed'''
         new_node_SES = np.random.choice([1, 0], 1, p=[self.p_SES_high, 1-self.p_SES_high])[0]
 
+        if MTO_sim == True:
+            new_node = 'MTO'
+            new_node_SES = 0
+
         return (new_node, {'SES_High': new_node_SES, 'Exposure Group': []})
 
 
     # find parent nodes connections
-    def find_parent_nodes_targets(self, graph):
+    def find_parent_nodes_targets(self, graph, new_node_SES_High):
         # get the current existing nodes
         current_nodes = graph.nodes()
 
+        # calculate probability of encountering each node: weight of 1 if same SES, 1/epsilon if different (epsilon times less likely)
+        parent_weights = [1 if self.helper_functions().get_select_node_attributes(graph, 'SES_High', [node])[node] == new_node_SES_High else 1/self.epsilon for node in current_nodes]
+        parent_probs = [prob / sum(parent_weights) for prob in parent_weights] # normalise by dividing by total number of nodes
+
+        # checks if empty graph, nothing significant
+        if len(current_nodes) > 0:
+            parent_targets = np.random.choice(current_nodes, min(self.m, len(current_nodes)), replace=False, p=parent_probs)
+        else:
+            parent_targets = np.random.choice(current_nodes, min(self.m, len(current_nodes)), replace=False)
+
         # get m parent nodes
-        parent_targets = np.random.choice(current_nodes, min(self.m, len(current_nodes)), replace=False)
+        #parent_targets = np.random.choice(current_nodes, min(self.m, len(current_nodes)), replace=False)
 
         return parent_targets
 
 
     # find parent neighbour connections
-    def find_parent_neighbour_targets(self, graph, parent_target_list):
+    def find_parent_neighbour_targets(self, graph, parent_target_list, new_node_SES_High):
         # take the list of parents and find their (unique) neighbours
         parent_neighbours = np.unique(self.helper_functions().find_neighbours(graph, parent_target_list))
 
         # to avoid issues: if the parents have in total less than n neighbours, take their number of neighbours instead
         n_possible_encounters = min(len(parent_neighbours), self.n)
 
+        
+        # calculate probability of encountering each node: weight of 1 if same SES, 1/epsilon if different (epsilon times less likely)
+        parent_neighbour_weights = [1 if self.helper_functions().get_select_node_attributes(graph, 'SES_High', [node])[node] == new_node_SES_High else 1/self.epsilon for node in parent_neighbours]
+        parent_neighbour_probs = [prob / sum(parent_neighbour_weights) for prob in parent_neighbour_weights] # normalise by dividing by total number of nodes
+
+        # checks if empty graph, nothing significant
+        if len(parent_neighbours) > 0:
+            parent_neighbour_targets = np.random.choice(parent_neighbours, n_possible_encounters, replace=False, p=parent_neighbour_probs)
+        else:
+            parent_neighbour_targets = np.random.choice(parent_neighbours, n_possible_encounters, replace=False)
+
+
         # get n parent neighbour nodes
-        parent_neighbour_targets = np.random.choice(parent_neighbours, n_possible_encounters, replace=False)
+        #parent_neighbour_targets = np.random.choice(parent_neighbours, n_possible_encounters, replace=False)
 
         return parent_neighbour_targets
 
@@ -217,7 +234,7 @@ class JacksonSimulationV2():
 
 
     # calculates exposure and friending bias across the graph
-    def graph_exposure_friending_bias(self, graph, return_dicts = False, return_hist_lists = False):
+    def graph_exposure_friending_bias(self, graph, return_dicts = False, return_hist_lists = False, node_target = None):       
         # calculates exposure and friending bias for a given node. Returns a dict with the two
         def node_exposure_friending_bias(graph, node):
             
@@ -258,6 +275,10 @@ class JacksonSimulationV2():
 
             return {'Exposure Effect': exposure, 'Friending Bias': friending_bias, 'SES': node_SES}
 
+        # if requested for a specific node, just return that directly
+        if node_target != None:
+            return node_exposure_friending_bias(graph, node_target)
+
         # list for each
         H_expo, H_bias = [], []
         L_expo, L_bias = [], []
@@ -294,6 +315,63 @@ class JacksonSimulationV2():
         return values_dict
         '''later, incorporate returning hists etc but who cares now'''
 
+    '''MOVING TO OPPORTUNITY SIMULATION'''
+
+    # main sim
+
+    
+
+    def MTO_sim_many(self, graph, n_sims = 1):
+        # do it once
+        def MTO_sim(graph):
+
+            MTO_graph = graph.copy()
+
+            MTO_node = self.new_node_birth(graph, MTO_sim=True)
+            MTO_graph.add_nodes_from([MTO_node])
+
+            # get the connections for the new node
+            parent_targets = self.find_parent_nodes_targets(self.graph_history[-1], 0) # DONE
+            parent_neighbour_targets = self.find_parent_neighbour_targets(self.graph_history[-1], parent_targets, 0) # DONE
+
+
+            # add the exposure group of the node to its attributes
+            new_node_targets = list(np.concatenate((parent_targets, parent_neighbour_targets)))
+            MTO_node[1]['Exposure Group'].extend(new_node_targets)
+
+            # get the connections based on the targets
+            new_node_edges = self.new_node_connections(MTO_node, parent_targets, parent_neighbour_targets, MTO_graph)
+
+
+            # add the connections
+            MTO_graph.add_edges_from(new_node_edges)
+
+
+            '''Calculate stuff'''
+            MTO_H_Share = self.helper_functions().find_neighbour_types(MTO_graph)[1]['MTO']['H Share']
+            Chetty_chars = self.graph_exposure_friending_bias(MTO_graph, node_target='MTO')
+            Exposure, Friend_Bias = Chetty_chars['Exposure Effect'], Chetty_chars['Friending Bias']
+            N_exposure = len(MTO_node[1]['Exposure Group'])
+            Degree = dict(MTO_graph.degree())['MTO']
+
+            return MTO_H_Share, Exposure, Friend_Bias, N_exposure, Degree
+
+        col_names = ['H_Share', 'Exposure', 'Friend_Bias', 'N_exposure', 'Degree']
+
+        # just return a dict if only one sim
+        if n_sims == 1:
+            return dict(zip(col_names, MTO_sim(graph)))
+        
+
+        list_results = [MTO_sim(graph) for i in range(n_sims)]
+
+        df_results = pd.DataFrame(list_results, columns=col_names)
+
+
+
+        return df_results
+
+
 
     class helper_functions:
         '''useful functions'''
@@ -313,7 +391,7 @@ class JacksonSimulationV2():
         # returns list of neighbours for all the nodes in the given list
         def find_neighbours(self, graph, node_list):
             if len(node_list) != 0:
-                all_neighbours_list = list(np.concatenate([list(graph.neighbors(node)) for node in node_list]))
+                all_neighbours_list = list(np.concatenate(([list(graph[node]) for node in node_list])))
             else:
                 all_neighbours_list = []
 
@@ -365,8 +443,11 @@ class JacksonSimulationV2():
             for node in nodes:
                 # find the neighbours
                 node_neighbours = self.find_neighbours(graph, [node])
+                neighbour_clustering = []
+
                 # get clustering for each neighbour and calculate the average
-                neighbour_clustering = [node_clustering[neighbour] for neighbour in node_neighbours]
+                for neighbour in node_neighbours:
+                    neighbour_clustering.append(node_clustering[neighbour])
                 avg_neighbour_clustering = np.average(neighbour_clustering)
 
                 # append to the dict: tuple with node's own degree, and its neighbours avg clustering
@@ -385,10 +466,10 @@ class JacksonSimulationV2():
             # summarising function
             def summ_graph_social_network_chars(GSNC_output):
                 summary_dict = {
-                    #'Diameter': GSNC_output['Diameter'],
+                    'Diameter': GSNC_output['Diameter'],
                     'APL': GSNC_output['APL'],
                     'Clustering': GSNC_output['Clustering'],
-                    'Degree-list': GSNC_output['Degree-list'],
+                    'Degree': GSNC_output['Degree'],
                     'Assortativity': GSNC_output['Assortativity'],
                     'Degree-neighbour-clustering': GSNC_output['Degree-neighbour-clustering'][0]
                 }
@@ -400,7 +481,7 @@ class JacksonSimulationV2():
             var_degree = np.var(degree_hist)
 
             small_world_char_dict = {
-                #'Diameter': nx.diameter(graph),     # low diameter
+                'Diameter': nx.diameter(graph),     # low diameter
                 'APL': nx.average_shortest_path_length(graph),      # relatively low APL (order of log n)
                 'Clustering': nx.average_clustering(graph),     # relatively high clustering
                 'Degree': (avg_degree, var_degree),     # fat degree tails
@@ -498,7 +579,4 @@ class JacksonSimulationV2():
                 else:
                     return (H_average, L_average)
             # return dicts as well for the plotly drawing
-
-
-
 
