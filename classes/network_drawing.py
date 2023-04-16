@@ -2,7 +2,7 @@
 
 import networkx as nx
 import numpy as np
-
+import plotly.express as px
 
 import plotly.graph_objects as go
 
@@ -75,7 +75,7 @@ class plotly_sim_drawing(object):
             #IDEA: add text for number of friends in each group
 
             marker=dict(
-                size=5,
+                size=10,
                 color=node_color_list),
         )
 
@@ -185,6 +185,8 @@ class plotly_sim_drawing(object):
                         title=title_dict,
                         titlefont_size=16,
                         showlegend=False,
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        plot_bgcolor='rgba(0,0,0,0)',
                         hovermode='closest',
                         margin=dict(b=5,l=5,r=l_margin,t=t_margin),
                         annotations=annotations,
@@ -195,4 +197,42 @@ class plotly_sim_drawing(object):
 
 
         return fig
+
+
+class plotly_lines(object):
+    
+    basic_dict = {
+        'title': None, 
+        'font':dict(size = 18),
+        'width': 500, 'height': 500,
+        'legend': dict(x=0.75,y=1),
+        'legend_title_text': '',
+        'margin': dict(b=5,l=5,r=5,t=5),
+        'xaxis': dict(showgrid = False, showline = True, linecolor = 'rgb(0,0,0)', linewidth = 2), 
+        'yaxis': dict(showgrid = False, showline = True, linecolor = 'rgb(0,0,0)', linewidth = 2),
+        'plot_bgcolor': 'rgba(0,0,0,0)'
+    }
+
+
+    def line_graph(self, x_vals, y_vals, param_dict, colors = None, hline_y = None, hline_text = None, vline_x = None, vline_text = None):
+        simple_graph = px.line(x=x_vals, y=y_vals)
+
+
+        layout_dict = param_dict | self.basic_dict
+
+        full_graph = simple_graph.update_layout(layout_dict)
+
+        # add lines if needed
+        if (hline_y != None) & (hline_text != None):
+            full_graph.add_hline(y=hline_y, line_width=1, annotation_text=hline_text)
+        if (vline_x != None) & (vline_text != None):
+            full_graph.add_vline(x=vline_x, line_width=1, annotation_text=vline_text)
+
+        # add colours
+        if colors != None:
+            for i in range(len(colors)):
+                full_graph.data[i].line.color = colors[i]
+
+        return full_graph
+
 
