@@ -2,6 +2,8 @@
 import networkx as nx
 import numpy as np
 import pandas as pd
+import random
+import string
 
 class JacksonSimulationV2():
 
@@ -206,7 +208,7 @@ class JacksonSimulationV2():
         # get list of probs depending on the probs
         parent_edge_probs = [self.pm_x if edge_type == 'cross' else self.pm_o for edge_type in parent_edge_types]
         # realised outcome per prob: vector of connections
-        parent_edges = [np.random.choice([0,1], size=1, p=[1-prob, prob])[0] for prob in parent_edge_probs]
+        parent_edges = [np.random.choice([0,1], size=1, p=[max(1-prob,0), min(prob, 1)])[0] for prob in parent_edge_probs]
 
         # realised connections: cross product of the two vectors
         parent_connections = parent_target_list * parent_edges
@@ -322,6 +324,10 @@ class JacksonSimulationV2():
     
 
     def MTO_sim_many(self, graph, n_sims = 1):
+
+        # generate a random 8-letter ID for this graph/simulation
+        str_sim_id = ''.join(random.choice(string.ascii_letters) for i in range(8))
+        
         # do it once
         def MTO_sim(graph):
 
@@ -354,9 +360,9 @@ class JacksonSimulationV2():
             N_exposure = len(MTO_node[1]['Exposure Group'])
             Degree = dict(MTO_graph.degree())['MTO']
 
-            return MTO_H_Share, Exposure, Friend_Bias, N_exposure, Degree
+            return str_sim_id, self.p_SES_high, self.epsilon, self.rho, MTO_H_Share, Exposure, Friend_Bias, N_exposure, Degree
 
-        col_names = ['H_Share', 'Exposure', 'Friend_Bias', 'N_exposure', 'Degree']
+        col_names = ['sim_id', 'p_SES_high', 'epsilon', 'rho', 'H_Share', 'Exposure', 'Friend_Bias', 'N_exposure', 'Degree']
 
         # just return a dict if only one sim
         if n_sims == 1:
@@ -366,7 +372,6 @@ class JacksonSimulationV2():
         list_results = [MTO_sim(graph) for i in range(n_sims)]
 
         df_results = pd.DataFrame(list_results, columns=col_names)
-
 
 
         return df_results
@@ -547,6 +552,7 @@ class JacksonSimulationV2():
 
         # returns a tuple: average share of H friends for H and L
         def average_neighbour_type_per_SES(self, graph, return_dicts = False, return_hist_lists = False):
+            
             H_dict, L_dict = self.find_neighbour_types(graph)
 
             H_share_list = [H_dict[node]['H Share'] for node in H_dict]
@@ -579,4 +585,7 @@ class JacksonSimulationV2():
                 else:
                     return (H_average, L_average)
             # return dicts as well for the plotly drawing
+
+
+
 

@@ -234,5 +234,27 @@ class plotly_lines(object):
                 full_graph.data[i].line.color = colors[i]
 
         return full_graph
+    
+
+    def scatter_graph(self, x_vals, y_vals, param_dict, colors = None, hline_y = None, hline_text = None, vline_x = None, vline_text = None):
+        simple_graph = px.scatter(x=x_vals, y=y_vals)
+
+
+        layout_dict = param_dict | self.basic_dict
+
+        full_graph = simple_graph.update_layout(layout_dict)
+
+        # add lines if needed
+        if (hline_y != None) & (hline_text != None):
+            full_graph.add_hline(y=hline_y, line_width=1, annotation_text=hline_text)
+        if (vline_x != None) & (vline_text != None):
+            full_graph.add_vline(x=vline_x, line_width=1, annotation_text=vline_text)
+
+        # add colours
+        if colors != None:
+            for i in range(len(colors)):
+                full_graph.data[i].line.color = colors[i]
+
+        return full_graph
 
 
