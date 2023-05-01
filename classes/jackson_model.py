@@ -25,6 +25,15 @@ class JacksonSimulationV2():
         # calculate cross-friendship probabilities: rho = po/px => px = po/rho
         self.pm_x = pm_o / rho
         self.pn_x = pn_o / rho
+        # correct if they are greater than 1/smaller than 0
+        if self.pm_x > 1:
+            self.pm_x = 1
+        if self.pm_x < 0:
+            self.pm_x = 0
+        if self.pn_x > 1:
+            self.pn_x = 1
+        if self.pn_x < 0:
+            self.pn_x = 0
 
         '''
         if biased == True and (rho == 1 or epsilon == 1):
