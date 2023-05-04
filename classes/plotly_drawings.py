@@ -110,7 +110,7 @@ class plotly_lines(object):
         return fig
     
     # plot MTO results: assumes that we have "predicted" versus something else
-    def plot_MTO_sim_results(self, data, x_var, y_var, x_range=[0,1], y_range=[0,1], x_title='', y_title='', with_predicted=False, colors=['rgba(0,0,255,1)', 'rgba(255,0,0,1)']):
+    def plot_MTO_sim_results(self, data, x_var, y_var, x_range=[0,1], y_range=[0,1], x_title='', y_title='', legend_text = '', with_predicted=False, colors=['rgba(0,0,255,1)', 'rgba(255,0,0,1)']):
 
         if with_predicted:
             fig_realised = self.line_with_error(data, x_var, y_var, color=colors[0], legend_text='Realised')
@@ -118,7 +118,7 @@ class plotly_lines(object):
             fig = go.Figure(data = fig_realised.data + fig_predicted.data)
         
         else:
-            fig_realised = self.line_with_error(data, x_var, y_var, color=colors[0], legend_text='')
+            fig_realised = self.line_with_error(data, x_var, y_var, color=colors[0], legend_text=legend_text)
             fig = go.Figure(data = fig_realised.data)
 
 
