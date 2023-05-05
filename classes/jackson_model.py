@@ -277,7 +277,7 @@ class JacksonSimulationV2():
                     friend_H_share = neighbours_types[1][node]['H Share']
 
                 # friending bias: 1 - share of H friends / share of H encounters (=0 if no bias)
-                friending_bias = 1 - friend_H_share / n_H_encountered
+                friending_bias = 1 - friend_H_share / (n_H_encountered/n_encountered)
             
             else:
                 exposure = n_H_encountered / ((n_encountered)*self.p_SES_high)
